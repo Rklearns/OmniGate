@@ -15,6 +15,8 @@ The dataset includes the following omics layers:
 - miRNA
 - Copy Number Variation (CNV)
 - DNA Methylation
+
+  
 This dataset enables benchmarking multi-omics models for subtype cancer classification.
 
 ![Omics Architecture](omics.png)
