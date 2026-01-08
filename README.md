@@ -8,6 +8,8 @@ A class-aware, interpretable deep learning framework for integrating multi-omics
 
 ---
 
+![Classify Architecture](https://raw.githubusercontent.com/Rklearns/IPD-MultiOmics_Research/main/Classify.jpg)
+
 ##  Key Innovations
 
 1.  **Context-Aware Gating:** Instead of static averaging, our **GateNet** learns to assign a "Trust Score" (0-1) to each omic modality specifically for each patient.
