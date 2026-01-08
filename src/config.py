@@ -1,30 +1,34 @@
 import torch
-import os
 import numpy as np
 
-# Hardware
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Hardware & Reproducibility
 SEED = 42
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def set_seed():
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
 
 # Paths
-DATA_ROOT = "./preprocessing/processed_multicancer"
-RESULTS_ROOT = "./research_results"
+BASE_DIR = "./preprocessing/processed_multicancer"
+RESULTS_ROOT = "./results_all_cancers"
 
-# Data Config
-GS_TYPES = ["GS-BRCA", "GS-GBM", "GS-COAD", "GS-LGG", "GS-OV"]
+# Data
+GS_TYPES = ["GS-BRCA", "GS-LGG", "GS-OV", "GS-COAD", "GS-GBM"]
 OMICS = ["mRNA", "miRNA", "CNV", "Methy"]
-TOP_K_GENES = 20
-
-# Training Hyperparameters
 N_SPLITS = 5
-MAX_EPOCHS = 300
-MIN_EPOCHS = 80
-PATIENCE = 40
+
+# Hyperparameters
+MAX_EPOCHS = 400
+MIN_EPOCHS = 100
+PATIENCE = 45
 LR = 1e-3
 WEIGHT_DECAY = 5e-4
+OMICS_DROPOUT_P = 0.2
 
-def setup_directories():
-    os.makedirs(RESULTS_ROOT, exist_ok=True)
-    # Set seeds
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
+# Loss Weights
+ALIGN_W = 0.2
+GATE_ENT_W = 0.05
+
+# Analysis
+TOP_K_GENES = 20

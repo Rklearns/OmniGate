@@ -1,57 +1,52 @@
-import torch
-import torch.nn as nn
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+import torch
 from sklearn.metrics import precision_score
 from sklearn.utils.class_weight import compute_class_weight
 
-from src.config import DEVICE, MAX_EPOCHS, MIN_EPOCHS, PATIENCE, LR, WEIGHT_DECAY
-from src.model import StrongMLP
+from src.config import (
+    DEVICE, MAX_EPOCHS, MIN_EPOCHS, PATIENCE, LR, WEIGHT_DECAY,
+    ALIGN_W, GATE_ENT_W
+)
+from src.model import GatedMultiOmicsClassifier, FocalLoss, alignment_loss, gate_entropy
 
-def train_on_split(X, y, tr, te):
-    scaler = StandardScaler()
-    Xtr = scaler.fit_transform(X[tr])
-    Xte = scaler.transform(X[te])
+def train_single_fold(omics_data, y, tr, te, Xtr_t, Xte_t, ytr_t, input_dims):
+    # Calculate Class Weights
+    classes = np.unique(y[tr])
+    w = compute_class_weight("balanced", classes=classes, y=y[tr])
+    w_tensor = torch.tensor(w, dtype=torch.float32).to(DEVICE)
 
-    Xtr_t = torch.tensor(Xtr, dtype=torch.float32).to(DEVICE)
-    Xte_t = torch.tensor(Xte, dtype=torch.float32).to(DEVICE)
-    ytr_t = torch.tensor(y[tr], dtype=torch.long).to(DEVICE)
+    loss_fn = FocalLoss(alpha=w_tensor)
+    model = GatedMultiOmicsClassifier(input_dims, len(classes)).to(DEVICE)
+    opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 
-    # Calculate class weights
-    weights = compute_class_weight(
-        class_weight="balanced",
-        classes=np.unique(y[tr]),
-        y=y[tr]
-    )
-
-    loss_fn = nn.CrossEntropyLoss(
-        weight=torch.tensor(weights, dtype=torch.float32).to(DEVICE)
-    )
-
-    # Initialize model
-    model = StrongMLP(Xtr.shape[1], len(np.unique(y))).to(DEVICE)
-    opt = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-
-    best_prec = 0.0
-    best_state = model.state_dict()
-    wait = 0
+    best_prec, wait = 0.0, 0
+    best_state = None
 
     for epoch in range(MAX_EPOCHS):
         model.train()
         opt.zero_grad()
-        loss_fn(model(Xtr_t), ytr_t).backward()
+
+        logits, zs, gates = model(Xtr_t, training=True)
+        
+        # Combined Loss
+        main_loss = loss_fn(logits, ytr_t)
+        align = ALIGN_W * alignment_loss(zs)
+        entropy = GATE_ENT_W * sum(gate_entropy(g) for g in gates.values())
+        
+        total_loss = main_loss + align + entropy
+        total_loss.backward()
         opt.step()
 
+        # Validation
         model.eval()
         with torch.no_grad():
-            preds = model(Xte_t).argmax(1).cpu().numpy()
-            prec = precision_score(
-                y[te], preds, average="weighted", zero_division=0
-            )
+            # [0] to get just logits from forward return
+            preds = model(Xte_t)[0].argmax(1).cpu().numpy()
+            prec = precision_score(y[te], preds, average="weighted", zero_division=0)
 
         if prec > best_prec:
             best_prec = prec
-            best_state = model.state_dict()
+            best_state = {k: v.cpu() for k, v in model.state_dict().items()}
             wait = 0
         else:
             wait += 1
@@ -59,5 +54,6 @@ def train_on_split(X, y, tr, te):
         if epoch >= MIN_EPOCHS and wait >= PATIENCE:
             break
 
-    model.load_state_dict(best_state)
+    # Restore best model
+    model.load_state_dict({k: v.to(DEVICE) for k, v in best_state.items()})
     return best_prec, model

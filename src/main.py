@@ -1,125 +1,197 @@
 import os
-import json
+import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold
-from itertools import combinations
 from collections import defaultdict
 
-# Import from our modules
+# ============================================================
+# IMPORTS FROM LOCAL MODULES
+# ============================================================
 from src.config import (
-    DATA_ROOT, RESULTS_ROOT, GS_TYPES, OMICS, 
-    N_SPLITS, TOP_K_GENES, SEED, setup_directories
+    BASE_DIR, RESULTS_ROOT, GS_TYPES, OMICS, N_SPLITS, TOP_K_GENES, 
+    set_seed, DEVICE
 )
-from src.utils import train_on_split
+from src.dataset import load_cancer_data, prepare_split
+from src.utils import train_single_fold
+
+# ============================================================
+# MAIN EXECUTION
+# ============================================================
 
 def main():
-    setup_directories()
-    
-    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
+    #  Setup
+    set_seed()
+    os.makedirs(RESULTS_ROOT, exist_ok=True)
 
-    for cancer in GS_TYPES:
-        print(f"\n==================== {cancer} ====================")
-
-        DATA_DIR = f"{DATA_ROOT}/{cancer}"
-        OUT_DIR = f"{RESULTS_ROOT}/{cancer}"
+    #  Iterate over Cancer Types
+    for CANCER in GS_TYPES:
+        print(f"\n==================== {CANCER} ====================")
+        OUT_DIR = os.path.join(RESULTS_ROOT, CANCER)
         os.makedirs(OUT_DIR, exist_ok=True)
 
-        # --- LOAD DATA ---
-        try:
-            X = {m: np.load(f"{DATA_DIR}/{m}_processed.npy") for m in OMICS}
-            y = np.load(f"{DATA_DIR}/labels.npy")
-            feature_names = {
-                m: json.load(open(f"{DATA_DIR}/{m}_features.json"))
-                for m in OMICS
-            }
-        except FileNotFoundError:
-            print(f"Skipping {cancer} (missing files)")
+        #  Load Data
+        omics_data, y = load_cancer_data(CANCER, BASE_DIR, OMICS)
+        if omics_data is None:
+            print(f"Skipping {CANCER} (missing files in {BASE_DIR})")
             continue
 
-        X_full = np.concatenate([X[m] for m in OMICS], axis=1)
-
-        # --- LOOP ---
-        full_scores = []
-        ablation_scores = {m: [] for m in OMICS}
-        weight_importance_per_fold = []
-
-        for tr, te in skf.split(X_full, y):
-            prec, model = train_on_split(X_full, y, tr, te)
-            full_scores.append(prec)
-
-            # Weight-based importance
-            W = model.fc1.weight.detach().cpu().numpy()
-            weight_importance_per_fold.append(np.linalg.norm(W, axis=0))
-
-            # Ablation
-            offset = 0
-            for m in OMICS:
-                d = X[m].shape[1]
-                X_drop = X_full.copy()
-                X_drop[:, offset:offset+d] = 0.0
-                p_drop, _ = train_on_split(X_drop, y, tr, te)
-                ablation_scores[m].append(p_drop)
-                offset += d
-
-        # --- ANALYSIS (Feature Importance) ---
-        mean_importance = np.mean(weight_importance_per_fold, axis=0)
-        offset = 0
-        gene_tables = {}
-
-        for m in OMICS:
-            d = X[m].shape[1]
-            scores = mean_importance[offset:offset+d]
-            genes = feature_names[m]
-            
-            # Safety check for lengths
-            min_len = min(len(scores), len(genes))
-            df = pd.DataFrame({
-                "Gene": genes[:min_len],
-                "Importance": scores[:min_len]
-            }).sort_values("Importance", ascending=False)
-
-            df.head(TOP_K_GENES).to_csv(f"{OUT_DIR}/top_{TOP_K_GENES}_{m}_genes.csv", index=False)
-            gene_tables[m] = df
-            offset += d
-
-        # --- FAEC (Stability) ---
-        faec_counter = defaultdict(int)
-        for imp in weight_importance_per_fold:
-            offset = 0
-            for m in OMICS:
-                d = X[m].shape[1]
-                scores = imp[offset:offset+d]
-                genes = feature_names[m]
-                
-                min_len = min(len(scores), len(genes))
-                top_idx = np.argsort(scores[:min_len])[-TOP_K_GENES:]
-                for idx in top_idx:
-                    faec_counter[(m, genes[idx])] += 1
-                offset += d
-
-        pd.DataFrame([
-            {"Omics": m, "Gene": g, "FAEC": c / N_SPLITS} for (m, g), c in faec_counter.items()
-        ]).sort_values("FAEC", ascending=False).to_csv(f"{OUT_DIR}/faec_gene_consistency.csv", index=False)
-
-        # --- CORI (Redundancy) ---
-        cori_records = []
-        for m1, m2 in combinations(OMICS, 2):
-            s1 = gene_tables[m1]["Importance"].values
-            s2 = gene_tables[m2]["Importance"].values
-            min_len = min(len(s1), len(s2))
-            corr = np.corrcoef(s1[:min_len], s2[:min_len])[0, 1]
-            cori_records.append({"Omics_A": m1, "Omics_B": m2, "CORI": abs(corr)})
+        #  Cross-Validation Initialization
+        skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=42)
         
-        pd.DataFrame(cori_records).to_csv(f"{OUT_DIR}/cori_table.csv", index=False)
+        fold_scores = []
+        gate_means = defaultdict(list)
+        latent_collect = defaultdict(list)
+        
+        # We need a reference model/data from the last fold for feature importance
+        last_model = None
+        last_Xte_t = None
 
-        # --- SUMMARY ---
-        summary = {"Mean_Precision": float(np.mean(full_scores)), "Std_Precision": float(np.std(full_scores))}
-        pd.DataFrame([summary]).to_csv(f"{OUT_DIR}/performance_summary.csv", index=False)
-        print(f"{cancer} PRECISION: {summary['Mean_Precision']:.4f} ± {summary['Std_Precision']:.4f}")
+        # 5. Training Loop
+        for fold_idx, (tr, te) in enumerate(skf.split(omics_data["mRNA"], y)):
+            # Prepare data for this fold
+            Xtr_t, Xte_t, ytr_t, Xtr_numpy, _ = prepare_split(omics_data, y, tr, te)
+            input_dims = {m: Xtr_numpy[m].shape[1] for m in Xtr_numpy}
 
-    print("\nPipeline completed successfully.")
+            # Train the model
+            prec, model = train_single_fold(
+                omics_data, y, tr, te, Xtr_t, Xte_t, ytr_t, input_dims
+            )
+            fold_scores.append(prec)
+            
+            # Store for post-hoc analysis
+            last_model = model
+            last_Xte_t = Xte_t
+
+            # Collect Gate & Latent stats for this fold
+            model.eval()
+            with torch.no_grad():
+                # Forward pass on test set
+                _, zs, gates = model(Xte_t)
+                
+                # Store Gate values
+                for m in OMICS:
+                    gate_means[m].append(gates[m].mean().item())
+                
+                # Store Latent representations (for CORI)
+                # zs is a list aligned with OMICS list order in model
+                # We assume model.encoders iterates in same order as OMICS list if dict is ordered
+                # Safer way: model returns 'gates' dict, but 'zs' list. 
+                # Let's map zs back to omics names based on list index if OMICS is fixed.
+                for i, m in enumerate(OMICS): 
+                    # Note: We rely on OMICS order being consistent.
+                    # GatedMultiOmicsClassifier.forward iterates self.encoders.
+                    # As long as Python 3.7+ is used, dict insertion order is preserved.
+                    latent_collect[m].append(torch.abs(zs[i]).mean(dim=0).cpu().numpy())
+            
+            print(f"  Fold {fold_idx+1}/{N_SPLITS} Precision: {prec:.4f}")
+
+        # ========================================================
+        #  SAVE METRICS & PLOTS
+        # ========================================================
+
+        # --- A. Performance ---
+        perf_df = pd.DataFrame({
+            "Mean_Precision": [np.mean(fold_scores)],
+            "Std_Precision": [np.std(fold_scores)]
+        })
+        perf_df.to_csv(os.path.join(OUT_DIR, "performance.csv"), index=False)
+        print(f"  > Mean Precision: {np.mean(fold_scores):.4f}")
+
+        # ---  Gate Importance ---
+        mean_gate = {m: np.mean(gate_means[m]) for m in OMICS}
+        pd.DataFrame(mean_gate.items(), columns=["Omics", "Mean_Gate"]).to_csv(
+            os.path.join(OUT_DIR, "gate_importance.csv"), index=False
+        )
+
+        plt.figure(figsize=(6,4))
+        plt.bar(mean_gate.keys(), mean_gate.values(), color='skyblue', edgecolor='black')
+        plt.title(f"{CANCER}: Gate Importance (Modality Relevance)")
+        plt.ylabel("Avg Gate Value (0-1)")
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUT_DIR, "gate_importance.png"), dpi=300)
+        plt.close()
+
+        # ---  FAEC (Gate Stability) ---
+        # FAEC here is defined as the standard deviation of gate values across folds (lower is better/more stable)
+        faec = {m: np.std(gate_means[m]) for m in OMICS}
+        
+        plt.figure(figsize=(6,4))
+        plt.bar(faec.keys(), faec.values(), color='salmon', edgecolor='black')
+        plt.title(f"{CANCER}: FAEC (Gate Stability - Std Dev)")
+        plt.ylabel("Standard Deviation")
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUT_DIR, "faec_gate_stability.png"), dpi=300)
+        plt.close()
+
+        # ---  CORI (Cross-Omics Redundancy Index) ---
+        # Correlation between the mean latent representations of omics pairs
+        mean_latent = {m: np.mean(latent_collect[m], axis=0) for m in OMICS}
+        cori_rows = []
+
+        for i in range(len(OMICS)):
+            for j in range(i + 1, len(OMICS)):
+                m1, m2 = OMICS[i], OMICS[j]
+                # Sort latent activations to compare distribution shapes
+                v1 = np.sort(mean_latent[m1])[::-1]
+                v2 = np.sort(mean_latent[m2])[::-1]
+                
+                # Ensure lengths match (should be 128 based on model, but safe check)
+                L = min(len(v1), len(v2))
+                corr = np.corrcoef(v1[:L], v2[:L])[0, 1]
+                
+                cori_rows.append({
+                    "Pair": f"{m1}-{m2}",
+                    "CORI": abs(corr)
+                })
+
+        cori_df = pd.DataFrame(cori_rows)
+        cori_df.to_csv(os.path.join(OUT_DIR, "cori.csv"), index=False)
+
+        if not cori_df.empty:
+            plt.figure(figsize=(8, 4))
+            plt.bar(cori_df["Pair"], cori_df["CORI"], color='lightgreen', edgecolor='black')
+            plt.xticks(rotation=30)
+            plt.title(f"{CANCER}: CORI (Latent Redundancy)")
+            plt.ylabel("Correlation Coefficient")
+            plt.tight_layout()
+            plt.savefig(os.path.join(OUT_DIR, "cori_plot.png"), dpi=300)
+            plt.close()
+
+        # --- Top-20 Genes (Sensitivity Analysis) ---
+        if last_model:
+            print("  > Calculating Top-20 Genes via Gradient Sensitivity...")
+            for m in OMICS:
+                encoder = last_model.encoders[m]
+                
+                # Clone test data and enable gradients
+                X = last_Xte_t[m].clone().detach().requires_grad_(True)
+                
+                # Forward pass through just the encoder
+                z = encoder(X)
+                
+                # Objective: Maximize norm of latent embedding
+                score = torch.norm(z, dim=1).mean()
+                score.backward()
+
+                # Calculate sensitivity (mean absolute gradient)
+                sens = X.grad.abs().mean(dim=0).cpu().numpy()
+                
+                # Get Top K indices
+                idx = np.argsort(sens)[::-1][:TOP_K_GENES]
+                
+                pd.DataFrame({
+                    "Feature_Index": idx,
+                    "Sensitivity": sens[idx]
+                }).to_csv(
+                    os.path.join(OUT_DIR, f"top_{TOP_K_GENES}_{m}_genes.csv"),
+                    index=False
+                )
+
+    print("\n========================================================")
+    print("ALL CANCERS PROCESSED SUCCESSFULLY. RESULTS SAVED.")
+    print("========================================================")
 
 if __name__ == "__main__":
     main()
