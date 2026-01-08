@@ -10,9 +10,6 @@ A class-aware, interpretable deep learning framework for integrating multi-omics
 ![Alt text](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Explainability.jpg)
 
 
-
-![Classify Architecture](https://raw.githubusercontent.com/Rklearns/IPD-MultiOmics_Research/main/Classify.jpg)
-
 ##  Key Innovations
 
 1.  **Context-Aware Gating:** Instead of static averaging, our **GateNet** learns to assign a "Trust Score" (0-1) to each omic modality specifically for each patient.
@@ -36,3 +33,4 @@ We compared our **Gated Multi-Modal Framework** against the standard **MLOmics B
 
 > **Key Observation:** The significant **3.78% boost** in Low-Grade Glioma (LGG) classification demonstrates the effectiveness of our **Gating Mechanism**. By dynamically up-weighting high-quality molecular signals and suppressing noise, our model captures subtle subtype differences that standard fusion methods often miss.
 
+![Classify Architecture](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Classify.jpg)
