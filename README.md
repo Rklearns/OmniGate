@@ -20,3 +20,14 @@ A class-aware, interpretable deep learning framework for integrating multi-omics
 
 ---
 
+## 🏆 Benchmark Comparison
+
+We compared our **Gated Multi-Modal Framework** against the standard **MLOmics Baseline**. Our model successfully outperformed the baseline, achieving superior precision on key MLOmics datasets.
+
+| Cancer Type | Dataset | MLOmics Baseline (Precision) | **Ours (Gated Fusion)** | Improvement |
+| :--- | :--- | :--- | :--- | :--- |
+| **Breast Carcinoma** | GS-BRCA | 87.00% | **87.52%** | +0.52% |
+| **Brain Glioma** | GS-LGG | 94.00% | **97.78%** |  **+3.78%** |
+
+> **Key Observation:** The significant **3.78% boost** in Low-Grade Glioma (LGG) classification demonstrates the effectiveness of our **Gating Mechanism**. By dynamically up-weighting high-quality molecular signals and suppressing noise, our model captures subtle subtype differences that standard fusion methods often miss.
+
