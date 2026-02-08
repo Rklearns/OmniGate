@@ -4,8 +4,6 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.12%2B-red)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A class-aware, interpretable deep learning framework for integrating multi-omics data (mRNA, miRNA, CNV, Methylation) to classify cancer subtypes. This project introduces a **Context-Aware Gating Mechanism** to dynamically weight modalities and a novel explainability suite (**FAEC** & **CORI**) to validate model stability.
-
 ---
 ![Alt text](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Explainability.jpg)
 
