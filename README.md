@@ -1,34 +1,67 @@
-# Gated Multi-Modal Fusion for Pan-Cancer Subtyping 🧬🤖
+# OMNIGATE: Omics-Integrated Gating for Explainable Multi-Cancer Subtype Classification 🧬🤖
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-1.12%2B-red)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
----
-![Alt text](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Explainability.jpg)
+
+#### OMNIGATE is a deep learning framework designed for robust multi-modal cancer subtype classification. Unlike traditional fusion methods that simply concatenate features, OMNIGATE utilizes a dynamic context gating mechanism that learns to weigh the importance of specific omics layers (mRNA, miRNA, CNV, Methylation) on a per-sample basis.
+
+This repository contains the official implementation of the paper, including the preprocessing logic, model architecture, and the explainability pipeline that generates publication-ready visualizations.
+##  Key Contributions
+
+1. **Dynamic Context Gating**: The model does not treat all omics equally. It constructs a "Global Context" vector to dynamically suppress noise and amplify signal from relevant modalities (e.g., prioritizing Methylation over mRNA for specific subtypes).
+
+2. **Multi-Objective Loss Landscape**: The training optimizes a compound loss function:
+
+3. **Focal Loss**: To handle extreme class imbalance in cancer subtypes.
+
+4. **Orthogonality & Alignment Loss**: Ensures latent representations are distinct yet semantically aligned.
+
+5. **Sparsity & Entropy Regularization**: Forces the gates to make decisive choices rather than averaging inputs.
+
+6. **Built-in Explainability**: The pipeline automatically extracts:
+
+7. **Top-K Biomarkers**: Gradient-based sensitivity analysis identifies the top 20 genes driving predictions.
+
+8. **Modality Importance**: Visualizes which omic layer contributes most to the decision.
+
+Robust Reproducibility: Uses Stratified K-Fold Cross-Validation with fixed random seeds (42) and aggregated reporting to ensure results are statistically significant, not just a "lucky fold."
 
 
-##  Key Innovations
+## Installation 
 
-1.  **Context-Aware Gating:** Instead of static averaging, our **GateNet** learns to assign a "Trust Score" (0-1) to each omic modality specifically for each patient.
-2.  **Imbalance-Resistant Training:** Utilizes **Focal Loss** combined with **Alignment** and **Entropy Regularization** to handle rare cancer subtypes effectively.
-3.  **Robust Explainability:**
-    *   **Gate Analysis:** Identifies which omics technology is most valuable.
-    *   **FAEC (Fold-Aware Effect Consistency):** Validates the stability of feature importance across cross-validation folds.
-    *   **CORI (Cross-Omics Redundancy Index):** Quantifies redundancy between data types to guide cost-effective clinical testing.
-    *   **Sensitivity Analysis:** Discovers Top-20 driver genes using gradient-based backpropagation.
+Clone the repository:
 
----
+```bash
+git clone https://github.com/yourusername/OMNIGATE.git
+cd OMNIGATE
+```
+Install dependencies:
+It is recommended to use a virtual environment (Conda or venv)
+```bash
+pip install -r requirements.txt
+```
+Usage
+To run the full pipeline (Training, Validation, and Explanation Generation):
+```bash
+cd src
+python main.py
+```
+
+
+
 
 ## 🏆 Benchmark Comparison
 
 We compared our **Gated Multi-Modal Framework** against the standard **MLOmics Baseline**. Our model successfully outperformed the baseline, achieving superior precision on key MLOmics datasets.
 
-| Cancer Type | Dataset | MLOmics Baseline (Precision) | **Ours (Gated Fusion)** | Improvement |
-| :--- | :--- | :--- | :--- | :--- |
-| **Breast Carcinoma** | GS-BRCA | 87.00% | **87.52%** | +0.52% |
-| **Brain Glioma** | GS-LGG | 94.00% | **97.78%** |  **+3.78%** |
-
-> **Key Observation:** The significant **3.78% boost** in Low-Grade Glioma (LGG) classification demonstrates the effectiveness of our **Gating Mechanism**. By dynamically up-weighting high-quality molecular signals and suppressing noise, our model captures subtle subtype differences that standard fusion methods often miss.
+| Cancer Type | Dataset | MLOmics Best Baseline(Precision)| **OMNIGATE**(ours) | 
+| :--- | :--- | :--- | :--- |
+| **Breast Carcinoma** | GS-BRCA | 87.00% | **88.35%** | 
+| **Brain Glioma** | GS-LGG | 94.00% | **98.47%** | 
+| **Adenocarcinoma** | GS-OV | **95%**| 89% | 
+| **Glioblastoma Multiforme** | GS-GBM | 95.00% | 84%|
+| **Colon Adenocarcinoma** | GS-COAD| 93.00% | **94.36**|
 
 ![Classify Architecture](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Classify.jpg)
