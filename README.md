@@ -64,4 +64,4 @@ We compared our **Gated Multi-Modal Framework** against the standard **MLOmics B
 | **Glioblastoma Multiforme** | GS-GBM | 95.00% | 84%|
 | **Colon Adenocarcinoma** | GS-COAD| 93.00% | **94.36**|
 
-![Classify Architecture](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Classify.jpg)
+![Classify Architecture](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/omnigate_pipeline.png)
