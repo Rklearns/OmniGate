@@ -1,8 +1,6 @@
 # OmniGate: Omics-Integrated Gating for Multi-Cancer Subtype Classification
 
-This repository contains a multi-omics deep learning pipeline for pan-cancer subtype prediction using gated fusion across `mRNA`, `miRNA`, `CNV`, and `DNA methylation` features. The training workflow performs stratified cross-validation, modality-aware feature fusion, classifier-head ablation, gradient-based sensitivity analysis, and automated export of publication-ready plots and CSV summaries.
-
-![Pipeline overview](omnigate_pipeline.png)
+> OMNIGATE is a deep learning framework designed for robust multi-modal cancer subtype classification. Unlike traditional fusion methods that simply concatenate features, OMNIGATE utilizes a dynamic context gating mechanism that learns to weigh the importance of specific omics layers (mRNA, miRNA, CNV, Methylation) on a per-sample basis.
 
 ## Overview
 
@@ -16,6 +14,10 @@ The current `src` pipeline supports:
 - Classifier-head ablation with `Base_MLP`, `SVM`, `XGBoost`, and `Deeper_MLP`
 - Aggregated gate-importance plots and Top-20 feature sensitivity plots
 - Fold-wise and global CSV export for downstream analysis
+  
+![Pipeline overview](omnigate_pipeline.png)
+
+
 
 ## Repository Layout
 
