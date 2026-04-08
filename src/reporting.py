@@ -81,10 +81,12 @@ def generate_aggregated_plots(
         top_scores = avg_sensitivity[top_indices]
         top_names = [feature_names[omic][idx] for idx in top_indices]
 
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(7.2, 5.8))
         sns.barplot(x=top_scores, y=top_names, hue=top_names, palette="magma", legend=False, orient="h", ax=ax)
         ax.set_title(f"{cancer_name} ({omic}): Top 20 Features", fontweight="bold")
         ax.set_xlabel("Average Sensitivity")
+        ax.tick_params(axis="y", labelsize=9)
+        ax.tick_params(axis="x", labelsize=9)
 
         # Force scientific notation for very small sensitivity values so miRNA plots remain readable.
         ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.1e}"))

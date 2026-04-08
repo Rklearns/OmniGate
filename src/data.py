@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 
@@ -34,10 +35,14 @@ def load_feature_names(cancer_name: str, omics_data: dict[str, np.ndarray]) -> d
         extracted_names: list[str] = []
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as handle:
-                for line in handle:
-                    match = re.search(r'"([^"]+)"', line)
-                    if match:
-                        extracted_names.append(match.group(1))
+                raw_content = handle.read().strip()
+
+            try:
+                parsed = json.loads(raw_content)
+                if isinstance(parsed, list):
+                    extracted_names = [str(name) for name in parsed]
+            except json.JSONDecodeError:
+                extracted_names = re.findall(r'"([^"]+)"', raw_content)
 
         if len(extracted_names) >= num_features:
             feature_names[omic] = extracted_names[:num_features]
