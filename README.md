@@ -15,7 +15,7 @@ The current `src` pipeline supports:
 - Aggregated gate-importance plots and Top-20 feature sensitivity plots
 - Fold-wise and global CSV export for downstream analysis
   
-![Pipeline overview](omnigate_pipeline.png)
+![Pipeline overview](docs/assets/omnigate_pipeline.png)
 
 
 
