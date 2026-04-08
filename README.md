@@ -1,8 +1,8 @@
-# Gated Multi-Omics Fusion for Pan-Cancer Subtyping
+# OmniGate: Omics-Integrated Gating for Multi-Cancer Subtype Classification
 
 This repository contains a multi-omics deep learning pipeline for pan-cancer subtype prediction using gated fusion across `mRNA`, `miRNA`, `CNV`, and `DNA methylation` features. The training workflow performs stratified cross-validation, modality-aware feature fusion, classifier-head ablation, gradient-based sensitivity analysis, and automated export of publication-ready plots and CSV summaries.
 
-![Pipeline overview](docs/assets/pipeline-overview.png)
+![Pipeline overview](omnigate_pipeline.png)
 
 ## Overview
 
@@ -17,12 +17,10 @@ The current `src` pipeline supports:
 - Aggregated gate-importance plots and Top-20 feature sensitivity plots
 - Fold-wise and global CSV export for downstream analysis
 
-![Explainability overview](docs/assets/explainability-overview.png)
-
 ## Repository Layout
 
 ```text
-ipd_code/
+OMNIGATE/
 ├── preprocessing/
 │   └── processed_multicancer/
 │       └── GS-*/                      # Per-cancer processed arrays and feature-name files
@@ -159,15 +157,6 @@ This design makes it easier to test whether performance gains come from the repr
 - Fold generation uses `StratifiedKFold`
 - CUDA is used automatically when available
 - Output directories are created automatically on startup
-
-## Troubleshooting
-
-If `python -m src.main` fails, the most common causes are:
-
-- Missing dependencies: run `pip install -r requirements.txt`
-- Missing processed `.npy` files: verify the expected folder layout under `preprocessing/processed_multicancer/`
-- Missing feature-name JSON files: the pipeline can fall back to generated feature names, but data arrays must still exist
-- Environment mismatch: confirm the active interpreter is the same one where dependencies were installed
 
 ## Intended Use
 
