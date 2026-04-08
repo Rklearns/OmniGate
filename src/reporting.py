@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.ticker import FuncFormatter
 
 try:
     from .config import OMICS, RESULTS_ROOT, TOP_K_GENES
@@ -80,12 +81,17 @@ def generate_aggregated_plots(
         top_scores = avg_sensitivity[top_indices]
         top_names = [feature_names[omic][idx] for idx in top_indices]
 
-        plt.figure(figsize=(8, 6))
-        sns.barplot(x=top_scores, y=top_names, hue=top_names, palette="magma", legend=False, orient="h")
-        plt.title(f"{cancer_name} ({omic}): Top 20 Features", fontweight="bold")
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, f"aggregated_top20_{omic}.png"))
-        plt.close()
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.barplot(x=top_scores, y=top_names, hue=top_names, palette="magma", legend=False, orient="h", ax=ax)
+        ax.set_title(f"{cancer_name} ({omic}): Top 20 Features", fontweight="bold")
+        ax.set_xlabel("Average Sensitivity")
+
+        # Force scientific notation for very small sensitivity values so miRNA plots remain readable.
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.1e}"))
+
+        fig.tight_layout()
+        fig.savefig(os.path.join(save_dir, f"aggregated_top20_{omic}.png"))
+        plt.close(fig)
 
         pd.DataFrame(
             {

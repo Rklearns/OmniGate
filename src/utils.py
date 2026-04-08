@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.ticker import FuncFormatter
 from sklearn.metrics import confusion_matrix
 from sklearn.manifold import TSNE
 from config import TOP_K_GENES, DIAGRAMS_DIR, RESULTS_DIR, OMICS
@@ -120,6 +121,8 @@ def generate_aggregated_reports(cancer_name, accumulators):
             )
             ax.set_title(f"Top 20 {m} Features ({cancer_name})", fontweight='bold')
             ax.set_xlabel("Mean Gradient Sensitivity")
+
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.1e}"))
             
             save_paper_plot(fig, cancer_name, f"Fig_Top20_{m}")
             plt.close()

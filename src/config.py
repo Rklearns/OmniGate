@@ -3,10 +3,13 @@ from __future__ import annotations
 import os
 import warnings
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import seaborn as sns
 import torch
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
 # ============================================================
