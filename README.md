@@ -1,34 +1,174 @@
-# Gated Multi-Modal Fusion for Pan-Cancer Subtyping 🧬🤖
+# Gated Multi-Omics Fusion for Pan-Cancer Subtyping
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-1.12%2B-red)
-![License](https://img.shields.io/badge/License-MIT-green)
+This repository contains a multi-omics deep learning pipeline for pan-cancer subtype prediction using gated fusion across `mRNA`, `miRNA`, `CNV`, and `DNA methylation` features. The training workflow performs stratified cross-validation, modality-aware feature fusion, classifier-head ablation, gradient-based sensitivity analysis, and automated export of publication-ready plots and CSV summaries.
 
----
-![Alt text](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Explainability.jpg)
+![Pipeline overview](docs/assets/pipeline-overview.png)
 
+## Overview
 
-##  Key Innovations
+The core model learns a latent representation for each omics modality and then applies a context-aware gate to each latent block before final classification. This lets the network dynamically emphasize the most informative modality for each sample instead of relying on static concatenation alone.
 
-1.  **Context-Aware Gating:** Instead of static averaging, our **GateNet** learns to assign a "Trust Score" (0-1) to each omic modality specifically for each patient.
-2.  **Imbalance-Resistant Training:** Utilizes **Focal Loss** combined with **Alignment** and **Entropy Regularization** to handle rare cancer subtypes effectively.
-3.  **Robust Explainability:**
-    *   **Gate Analysis:** Identifies which omics technology is most valuable.
-    *   **FAEC (Fold-Aware Effect Consistency):** Validates the stability of feature importance across cross-validation folds.
-    *   **CORI (Cross-Omics Redundancy Index):** Quantifies redundancy between data types to guide cost-effective clinical testing.
-    *   **Sensitivity Analysis:** Discovers Top-20 driver genes using gradient-based backpropagation.
+The current `src` pipeline supports:
 
----
+- Multi-cancer training across `GS-BRCA`, `GS-LGG`, `GS-OV`, `GS-COAD`, and `GS-GBM`
+- Gated multi-omics neural fusion with focal loss and regularization terms
+- Dynamic fold selection based on the minimum class count
+- Classifier-head ablation with `Base_MLP`, `SVM`, `XGBoost`, and `Deeper_MLP`
+- Aggregated gate-importance plots and Top-20 feature sensitivity plots
+- Fold-wise and global CSV export for downstream analysis
 
-## 🏆 Benchmark Comparison
+![Explainability overview](docs/assets/explainability-overview.png)
 
-We compared our **Gated Multi-Modal Framework** against the standard **MLOmics Baseline**. Our model successfully outperformed the baseline, achieving superior precision on key MLOmics datasets.
+## Repository Layout
 
-| Cancer Type | Dataset | MLOmics Baseline (Precision) | **Ours (Gated Fusion)** | Improvement |
-| :--- | :--- | :--- | :--- | :--- |
-| **Breast Carcinoma** | GS-BRCA | 87.00% | **87.52%** | +0.52% |
-| **Brain Glioma** | GS-LGG | 94.00% | **97.78%** |  **+3.78%** |
+```text
+ipd_code/
+├── preprocessing/
+│   └── processed_multicancer/
+│       └── GS-*/                      # Per-cancer processed arrays and feature-name files
+├── results_aggregated/               # Generated outputs after training
+├── src/
+│   ├── config.py                     # Global settings, paths, runtime configuration
+│   ├── data.py                       # Dataset and feature-name loading
+│   ├── models.py                     # Losses and gated fusion network
+│   ├── training.py                   # Fold training and classifier ablation
+│   ├── reporting.py                  # Plotting and CSV export
+│   └── main.py                       # End-to-end training entrypoint
+├── docs/
+│   └── assets/                       # README figures
+└── requirements.txt
+```
 
-> **Key Observation:** The significant **3.78% boost** in Low-Grade Glioma (LGG) classification demonstrates the effectiveness of our **Gating Mechanism**. By dynamically up-weighting high-quality molecular signals and suppressing noise, our model captures subtle subtype differences that standard fusion methods often miss.
+## Data Format
 
-![Classify Architecture](https://github.com/Rklearns/IPD-MultiOmics_Research/blob/main/Classify.jpg)
+Each cancer directory under `preprocessing/processed_multicancer/` is expected to contain:
+
+- `mRNA_processed.npy`
+- `miRNA_processed.npy`
+- `CNV_processed.npy`
+- `Methy_processed.npy`
+- `labels.npy`
+- `mRNA_features.json`
+- `miRNA_features.json`
+- `CNV_features.json`
+- `Methy_features.json`
+
+Example:
+
+```text
+preprocessing/processed_multicancer/GS-BRCA/
+├── mRNA_processed.npy
+├── miRNA_processed.npy
+├── CNV_processed.npy
+├── Methy_processed.npy
+├── labels.npy
+├── mRNA_features.json
+├── miRNA_features.json
+├── CNV_features.json
+└── Methy_features.json
+```
+
+## Environment Setup
+
+### 1. Create and activate a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+The training pipeline expects these main packages:
+
+- `torch`
+- `numpy`
+- `pandas`
+- `matplotlib`
+- `seaborn`
+- `scikit-learn`
+- `xgboost`
+- `captum`
+
+## How To Train
+
+Run the full multi-cancer pipeline from the repository root:
+
+```bash
+python -m src.main
+```
+
+This command will:
+
+1. Load each cancer dataset from `preprocessing/processed_multicancer/`
+2. Train the gated fusion model with stratified cross-validation
+3. Evaluate alternative classifier heads on the learned fused representation
+4. Compute sensitivity-based Top-20 feature rankings for each omics modality
+5. Save all aggregated figures and CSV summaries to `results_aggregated/`
+
+## Outputs
+
+After training, the pipeline writes outputs such as:
+
+- `results_aggregated/final_ablation_summary_all_cancers.csv`
+- `results_aggregated/<CANCER>/detailed_ablation_results.csv`
+- `results_aggregated/<CANCER>/aggregated_gate_importance.png`
+- `results_aggregated/<CANCER>/aggregated_top20_mRNA.csv`
+- `results_aggregated/<CANCER>/aggregated_top20_mRNA.png`
+
+Equivalent Top-20 feature files are also produced for `miRNA`, `CNV`, and `Methy`.
+
+## Configuration
+
+Main runtime settings are defined in `src/config.py`, including:
+
+- `MAX_EPOCHS`
+- `MIN_EPOCHS`
+- `PATIENCE`
+- `LR`
+- `WEIGHT_DECAY`
+- `ALIGN_W`
+- `ORTHO_W`
+- `GATE_ENT_W`
+- `SPARSITY_W`
+- `OMICS_DROPOUT_P`
+- `LATENT_DIM`
+
+If you want to adapt the pipeline for new experiments, this is the first file to modify.
+
+## Method Summary
+
+The model trains one encoder per modality, concatenates latent vectors to build global context, and then predicts modality-specific gates from that context. The gated latent vectors are fused and passed into a classifier head. Training combines focal loss with alignment, orthogonality, gate-entropy, and sparsity terms to improve robustness and reduce redundant modality usage.
+
+The ablation workflow reuses learned fused embeddings and compares:
+
+- Neural baseline head
+- SVM head
+- XGBoost head
+- Deeper MLP head
+
+This design makes it easier to test whether performance gains come from the representation itself, the classifier head, or both.
+
+## Reproducibility
+
+- Random seeds are fixed in `src/config.py`
+- Fold generation uses `StratifiedKFold`
+- CUDA is used automatically when available
+- Output directories are created automatically on startup
+
+## Troubleshooting
+
+If `python -m src.main` fails, the most common causes are:
+
+- Missing dependencies: run `pip install -r requirements.txt`
+- Missing processed `.npy` files: verify the expected folder layout under `preprocessing/processed_multicancer/`
+- Missing feature-name JSON files: the pipeline can fall back to generated feature names, but data arrays must still exist
+- Environment mismatch: confirm the active interpreter is the same one where dependencies were installed
+
+## Intended Use
+
+This codebase is structured for research experimentation, internal benchmarking, and figure generation around multi-omics cancer subtype classification. For production or clinical deployment, additional dataset validation, calibration, uncertainty estimation, and external evaluation would be required.
