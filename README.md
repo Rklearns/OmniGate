@@ -24,6 +24,7 @@
   <img src="https://img.shields.io/badge/Scikit--Learn-ML-orange?style=flat-square&logo=scikitlearn" />
   <img src="https://img.shields.io/badge/Multi--Omics-Cancer%20Classification-purple?style=flat-square" />
 </p>
+
 > OMNIGATE is a deep learning framework designed for robust multi-modal cancer subtype classification. Unlike traditional fusion methods that simply concatenate features, OMNIGATE utilizes a dynamic context gating mechanism that learns to weigh the importance of specific omics layers (mRNA, miRNA, CNV, Methylation) on a per-sample basis.
 
 
