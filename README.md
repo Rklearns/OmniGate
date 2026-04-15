@@ -1,6 +1,15 @@
 # OmniGate: Omics-Integrated Gating for Multi-Cancer Subtype Classification
 <p align="center">
-  <b>Authors: Rishit Kar, Ved Ambular, Sargam Nagar, Varun Shenai</b>
+  <strong>
+    <a href="https://github.com/Rklearns">Rishit Kar</a><sup>1</sup>, 
+    <a href="https://github.com/Veddd27">Ved Ambular</a><sup>1</sup>, 
+    <a href="https://github.com/srgmnagar">Sargam Nagar</a><sup>1</sup>, 
+    <a href="https://github.com/DioBranddo">Varun Shenai</a><sup>1</sup>
+  </strong>
+</p>
+
+<p align="center">
+  <sup>1</sup> Department of Computer Engineering, DJ Sanghvi College of Engineering
 </p>
 <p align="center">
   <a href="#dataset-description">
