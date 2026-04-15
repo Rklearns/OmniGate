@@ -1,5 +1,29 @@
 # OmniGate: Omics-Integrated Gating for Multi-Cancer Subtype Classification
 
+<p align="center">
+  <a href="#dataset-description">
+    <img src="https://img.shields.io/badge/Dataset-MLOmics-blue?style=for-the-badge" />
+  </a>
+  <a href="#repository-layout">
+    <img src="https://img.shields.io/badge/Project-Structure-green?style=for-the-badge" />
+  </a>
+  <a href="#how-to-train">
+    <img src="https://img.shields.io/badge/Train-Pipeline-orange?style=for-the-badge" />
+  </a>
+  <a href="#outputs">
+    <img src="https://img.shields.io/badge/Results-Outputs-purple?style=for-the-badge" />
+  </a>
+  <a href="#configuration">
+    <img src="https://img.shields.io/badge/Config-Settings-red?style=for-the-badge" />
+  </a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.x-blue?style=flat-square&logo=python" />
+  <img src="https://img.shields.io/badge/PyTorch-Deep%20Learning-red?style=flat-square&logo=pytorch" />
+  <img src="https://img.shields.io/badge/XGBoost-Ablation-success?style=flat-square" />
+  <img src="https://img.shields.io/badge/Scikit--Learn-ML-orange?style=flat-square&logo=scikitlearn" />
+  <img src="https://img.shields.io/badge/Multi--Omics-Cancer%20Classification-purple?style=flat-square" />
+</p>
 > OMNIGATE is a deep learning framework designed for robust multi-modal cancer subtype classification. Unlike traditional fusion methods that simply concatenate features, OMNIGATE utilizes a dynamic context gating mechanism that learns to weigh the importance of specific omics layers (mRNA, miRNA, CNV, Methylation) on a per-sample basis.
 
 
