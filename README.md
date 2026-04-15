@@ -1,5 +1,7 @@
 # OmniGate: Omics-Integrated Gating for Multi-Cancer Subtype Classification
-
+<p align="center">
+  <b>Authors: Rishit Kar, Ved Ambular, Sargam Nagar, Varun Shenai</b>
+</p>
 <p align="center">
   <a href="#dataset-description">
     <img src="https://img.shields.io/badge/Dataset-MLOmics-blue?style=for-the-badge" />
