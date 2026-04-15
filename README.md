@@ -2,6 +2,7 @@
 
 > OMNIGATE is a deep learning framework designed for robust multi-modal cancer subtype classification. Unlike traditional fusion methods that simply concatenate features, OMNIGATE utilizes a dynamic context gating mechanism that learns to weigh the importance of specific omics layers (mRNA, miRNA, CNV, Methylation) on a per-sample basis.
 
+
 ## Dataset Description
 The dataset used in this study is extracted from the [MLOmics dataset](https://github.com/chenzRG/Cancer-Multi-Omics-Benchmark), a publicly available multi-omics benchmark designed for cancer subtype classification tasks. It integrates heterogeneous molecular data collected from large-scale cancer genomics projects.
 ## Overview
@@ -38,7 +39,9 @@ OMNIGATE/
 │   └── main.py                       # End-to-end training entrypoint
 ├── docs/
 │   └── assets/                       # README figures
+├── final_ablation_summary_all_cancers.csv
 └── requirements.txt
+
 ```
 
 ## Data Format
