@@ -59,6 +59,7 @@ def generate_aggregated_plots(
     gate_means = {omic: np.mean(values) for omic, values in accumulators["gates"].items()}
     gate_stds = {omic: np.std(values) for omic, values in accumulators["gates"].items()}
 
+    # Gate activations summarize which omics branches the model leaned on across cross-validation folds.
     plt.figure(figsize=(6, 5))
     x_vals = list(gate_means.keys())
     y_vals = list(gate_means.values())
@@ -76,6 +77,7 @@ def generate_aggregated_plots(
         if accumulators["sensitivity"][omic] is None:
             continue
 
+        # Sensitivity scores are accumulated per fold and averaged here before ranking the top features.
         avg_sensitivity = accumulators["sensitivity"][omic] / n_folds
         top_indices = np.argsort(avg_sensitivity)[::-1][:TOP_K_GENES]
         top_scores = avg_sensitivity[top_indices]

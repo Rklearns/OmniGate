@@ -14,6 +14,7 @@ except ImportError:
 
 def load_cancer_dataset(cancer_name: str) -> tuple[dict[str, np.ndarray], np.ndarray]:
     data_dir = os.path.join(BASE_DIR, cancer_name)
+    # Each omics array is expected to share the same sample ordering so folds stay aligned across views.
     omics_data = {
         "mRNA": np.load(os.path.join(data_dir, "mRNA_processed.npy")),
         "miRNA": np.load(os.path.join(data_dir, "miRNA_processed.npy")),
@@ -38,15 +39,18 @@ def load_feature_names(cancer_name: str, omics_data: dict[str, np.ndarray]) -> d
                 raw_content = handle.read().strip()
 
             try:
+                # The current preprocessing step writes feature names as a JSON list in column order.
                 parsed = json.loads(raw_content)
                 if isinstance(parsed, list):
                     extracted_names = [str(name) for name in parsed]
             except json.JSONDecodeError:
+                # Older artifacts were less structured, so keep a permissive fallback for quoted names.
                 extracted_names = re.findall(r'"([^"]+)"', raw_content)
 
         if len(extracted_names) >= num_features:
             feature_names[omic] = extracted_names[:num_features]
         elif extracted_names:
+            # If a feature file is shorter than the matrix width, preserve the known names and pad the tail.
             padding = [f"{omic}_Feat_{idx}" for idx in range(len(extracted_names), num_features)]
             feature_names[omic] = extracted_names + padding
         else:

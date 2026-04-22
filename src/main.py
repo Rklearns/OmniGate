@@ -35,6 +35,7 @@ def run_pipeline() -> None:
         feature_names = load_feature_names(cancer_name, omics_data)
         accumulators = create_accumulators()
 
+        # If a subtype is very small, shrink the fold count so every split remains valid.
         min_class_size = np.min(np.unique(labels, return_counts=True)[1])
         n_splits = max(2, min_class_size) if min_class_size < DEFAULT_N_SPLITS else DEFAULT_N_SPLITS
         splitter = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
@@ -67,6 +68,7 @@ def run_pipeline() -> None:
         generate_aggregated_plots(cancer_name, accumulators, n_splits, feature_names)
 
     if global_ablation_summary:
+        # This file is the cross-cancer summary table used for quick comparison and downstream reporting.
         summary_df = pd.DataFrame(global_ablation_summary)
         summary_path = os.path.join(RESULTS_ROOT, "final_ablation_summary_all_cancers.csv")
         summary_df.to_csv(summary_path, index=False)

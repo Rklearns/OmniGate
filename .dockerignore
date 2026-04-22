@@ -1,0 +1,14 @@
+.git
+.gitignore
+.DS_Store
+venv
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ipynb_checkpoints
+results_aggregated
+docs/assets
+*.pyc
+*.pyo
+*.pyd
