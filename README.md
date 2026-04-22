@@ -111,36 +111,68 @@ preprocessing/processed_multicancer/GS-BRCA/
 
 ## Environment Setup
 
-### 1. Create and activate a virtual environment
+The easiest way to run this project reproducibly is with Docker. The container installs all dependencies, includes the training code, and runs the pipeline in a headless environment that is already configured for matplotlib.
+
+## Quick Start With Docker
+
+### 1. Build the image
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+docker build -t omnigate .
 ```
 
-### 2. Install dependencies
+### 2. Run the full pipeline
 
 ```bash
-pip install -r requirements.txt
+docker run --rm -it omnigate
 ```
 
-The training pipeline expects these main packages:
+This starts the full multi-cancer training pipeline and writes outputs inside the container at:
 
-- `torch`
-- `numpy`
-- `pandas`
-- `matplotlib`
-- `seaborn`
-- `scikit-learn`
-- `xgboost`
-- `captum`
+```text
+/app/results_aggregated
+```
+
+### 3. Save generated outputs to your machine
+
+If you want the generated plots and CSV files to appear directly in your local project folder, mount the results directory when running the container:
+
+```bash
+docker run --rm -it \
+  -v "$(pwd)/results_aggregated:/app/results_aggregated" \
+  omnigate
+```
+
+This is the most practical way to work with the project because the exported files will remain available on your host system after the container exits.
+
+## Data Setup
+
+Before running the container, make sure the processed dataset is already present in:
+
+```text
+preprocessing/processed_multicancer/
+```
+
+Each cancer directory should include:
+
+- `mRNA_processed.npy`
+- `miRNA_processed.npy`
+- `CNV_processed.npy`
+- `Methy_processed.npy`
+- `labels.npy`
+- `mRNA_features.json`
+- `miRNA_features.json`
+- `CNV_features.json`
+- `Methy_features.json`
 
 ## How To Train
 
-Run the full multi-cancer pipeline from the repository root:
+For most users, Docker is the recommended training path:
 
 ```bash
-python -m src.main
+docker run --rm -it \
+  -v "$(pwd)/results_aggregated:/app/results_aggregated" \
+  omnigate
 ```
 
 This command will:
@@ -150,6 +182,10 @@ This command will:
 3. Evaluate alternative classifier heads on the learned fused representation
 4. Compute sensitivity-based Top-20 feature rankings for each omics modality
 5. Save all aggregated figures and CSV summaries to `results_aggregated/`
+
+## Alternative Local Run
+
+If you do not want to use Docker, you can still run the code locally with a Python environment and `requirements.txt`. That path is optional now, and Docker should be preferred when you want the easiest reproducible setup.
 
 ## Outputs
 
