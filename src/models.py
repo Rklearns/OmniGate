@@ -24,6 +24,7 @@ class FocalLoss(nn.Module):
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         n_classes = logits.size(1)
         with torch.no_grad():
+            # Build a smoothed target distribution so the model is not trained against a perfectly hard label.
             true_dist = torch.zeros_like(logits)
             true_dist.fill_(self.smoothing / (n_classes - 1))
             true_dist.scatter_(1, targets.unsqueeze(1), 1 - self.smoothing)
@@ -43,6 +44,7 @@ def alignment_loss(zs: list[torch.Tensor]) -> torch.Tensor:
     loss = 0
     for i in range(len(zs)):
         for j in range(i + 1, len(zs)):
+            # Cosine-style agreement encourages the omics branches to encode the same patient coherently.
             zi = F.normalize(zs[i], dim=1)
             zj = F.normalize(zs[j], dim=1)
             loss += 1 - (zi * zj).sum(dim=1).mean()
@@ -53,6 +55,7 @@ def orthogonality_loss(zs: list[torch.Tensor]) -> torch.Tensor:
     loss = 0
     for i in range(len(zs)):
         for j in range(i + 1, len(zs)):
+            # This term counterbalances alignment by discouraging branches from collapsing into redundant copies.
             zi = F.normalize(zs[i], dim=1)
             zj = F.normalize(zs[j], dim=1)
             loss += torch.abs((zi * zj).sum(dim=1)).mean()
@@ -124,6 +127,7 @@ class GatedMultiOmicsClassifier(nn.Module):
     def extract_features(self, x_dict: dict[str, torch.Tensor]) -> torch.Tensor:
         zs_map = {omic: self.encoders[omic](x_dict[omic]) for omic in self.encoders}
         global_context = torch.cat(list(zs_map.values()), dim=1)
+        # Downstream ablation heads operate on the same gated fused representation used by the base classifier.
         gated_latents = [zs_map[omic] * self.gates[omic](global_context) for omic in self.encoders]
         return torch.cat(gated_latents, dim=1)
 
@@ -131,6 +135,7 @@ class GatedMultiOmicsClassifier(nn.Module):
         self, x_dict: dict[str, torch.Tensor]
     ) -> tuple[torch.Tensor, list[torch.Tensor], dict[str, torch.Tensor]]:
         zs_map = {omic: self.encoders[omic](x_dict[omic]) for omic in self.encoders}
+        # Every gate sees the joint multi-omics context, not just its own branch.
         global_context = torch.cat(list(zs_map.values()), dim=1)
 
         ungated_latents = []
@@ -140,6 +145,7 @@ class GatedMultiOmicsClassifier(nn.Module):
         for omic in self.encoders:
             latent = zs_map[omic]
             gates = self.gates[omic](global_context)
+            # Keep the ungated latents for regularization losses and the gated version for fusion.
             ungated_latents.append(latent)
             gated_latents.append(latent * gates)
             gates_map[omic] = gates

@@ -56,6 +56,7 @@ def train_and_collect(
     x_train, x_test = {}, {}
     for omic_name, values in omics_data.items():
         scaler = StandardScaler()
+        # Each modality is standardized independently inside the current fold to avoid leakage.
         x_train[omic_name] = scaler.fit_transform(values[train_indices])
         x_test[omic_name] = scaler.transform(values[test_indices])
 
@@ -66,6 +67,7 @@ def train_and_collect(
     y_train_t = torch.tensor(y_train, dtype=torch.long).to(DEVICE)
 
     class_weights = compute_class_weight("balanced", classes=np.unique(y_train), y=y_train)
+    # A mild power transform keeps rare classes emphasized without making the weighting too brittle.
     class_weights = np.power(class_weights, 1.25)
     class_weights_t = torch.tensor(class_weights, dtype=torch.float32).to(DEVICE)
 
@@ -86,6 +88,7 @@ def train_and_collect(
 
         train_inputs = {key: value.clone() for key, value in x_train_t.items()}
         if torch.rand(1).item() < OMICS_DROPOUT_P:
+            # Randomly blank one omics view during training so the fusion block does not over-rely on a single source.
             dropped_omic = np.random.choice(list(train_inputs.keys()))
             train_inputs[dropped_omic] = torch.zeros_like(train_inputs[dropped_omic])
 
@@ -113,6 +116,7 @@ def train_and_collect(
         else:
             wait += 1
 
+        # Early stopping is keyed to weighted precision because that is the primary comparison metric in the study.
         if epoch >= MIN_EPOCHS and wait >= PATIENCE:
             break
 
@@ -138,6 +142,7 @@ def train_and_collect(
         for omic in OMICS:
             accumulators["gates"][omic].append(gate_values[omic].mean().item())
 
+        # The ablation heads are evaluated on the learned fused embedding rather than raw omics features.
         fused_train = model.extract_features(x_train_t).cpu().numpy()
         fused_test = model.extract_features(x_test_t).cpu().numpy()
 
@@ -187,6 +192,7 @@ def train_and_collect(
 
         model.zero_grad(set_to_none=True)
         logits, _, _ = model(full_inputs)
+        # We use mean top-logit sensitivity as a simple post hoc signal of feature influence within each modality.
         logits.max(dim=1)[0].mean().backward()
 
         sensitivity = inputs.grad.abs().mean(dim=0).cpu().numpy()
